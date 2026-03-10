@@ -1,0 +1,16 @@
+*.o
+*.so
+*.dynlib
+
+.vscode/*
+*.dSYM/
+bin/*
+tests/tests
+example
+pagination
+issues
+prs
+comments
+branches
+librattler.dylib
+librattler.so
