@@ -414,7 +414,7 @@ Global Flags:
   -v, --verbose
         verbose output (default false)
 
-Use "exmaple [command] --help" for more information.
+Use "example [command] --help" for more information.
 ```
 
 ### Version
@@ -431,8 +431,8 @@ example version 2.0.0
 ### Typo Suggestions (Levenshtein distance)
 
 ```sh
-$ ./example convrt
-rattler: unknown command "convrt"
+$ ./example convert
+rattler: unknown command "convert"
 
 Did you mean this?
     convert
