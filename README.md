@@ -1,6 +1,6 @@
-# libgithub
+# librattler
 
-libratter brings the elegant command-tree model of Go's cobra framework to C.
+ratter brings the elegant command-tree model of Go's cobra framework to C.
 
 Build rich, nested CLIs with flags, aliases, lifecycle hooks, and constraint validation — all with **zero external dependencies**, inspired by [spf13/cobra](https://github.com/spf13/cobra).
 
