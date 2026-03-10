@@ -447,14 +447,15 @@ These are safe to call at any point while the command tree is alive.
 static void
 my_run(rattler_cmd *cmd, int argc, char **argv)
 {
-    const char *output  = rattler_flag_string(cmd, "output");
-    int         count   = rattler_flag_int   (cmd, "count");
-    double      rate    = rattler_flag_float (cmd, "rate");
-    bool        verbose = rattler_flag_bool  (cmd, "verbose");
+    const char *output = rattler_flag_string(cmd, "output");
+    int count = rattler_flag_int(cmd, "count");
+    double rate = rattler_flag_float(cmd, "rate");
+    bool verbose = rattler_flag_bool(cmd, "verbose");
 
     // Check if a flag was explicitly set by the user
-    if (rattler_flag_changed(cmd, "count"))
+    if (rattler_flag_changed(cmd, "count")) {
         printf("User explicitly set --count to %d\n", count);
+    }
 }
 ```
 
@@ -463,7 +464,7 @@ my_run(rattler_cmd *cmd, int argc, char **argv)
 ```c
 // create a new command
 rattler_cmd *rattler_new_command(const char *use, const char *short_desc,
-                                const char *long_desc);
+                                 const char *long_desc);
 
 // add a child command
 void rattler_add_command(rattler_cmd *parent, rattler_cmd *child);
@@ -551,17 +552,17 @@ bool rattler_flag_bool(rattler_cmd *cmd, const char *name);
 ### rattler_cmd Fields (set directly)
 
 ```c
-cmd->run                  = my_run_fn;            // main run function
-cmd->pre_run              = my_pre_fn;            // runs before run
-cmd->post_run             = my_post_fn;           // runs after run
-cmd->persistent_pre_run   = my_ppr_fn;            // inherited pre-run
-cmd->persistent_post_run  = my_ppor_fn;           // inherited post-run
-cmd->example              = "  example foo\n"         // shown in --help
-                            "  example bar\n";
-cmd->hidden               = true;                 // hide from help listing
-cmd->deprecated           = "use 'new' instead";  // deprecation warning
-cmd->silence_usage        = true;                 // suppress usage on error
-cmd->disable_flag_parsing = true;                 // pass all args raw
+cmd->run = my_run_fn;                  // main run function
+cmd->pre_run = my_pre_fn;              // runs before run
+cmd->post_run = my_post_fn;            // runs after run
+cmd->persistent_pre_run = my_ppr_fn;   // inherited pre-run
+cmd->persistent_post_run = my_ppor_fn; // inherited post-run
+cmd->example = "  example foo\n"       // shown in --help
+               "  example bar\n";
+cmd->hidden = true;                    // hide from help listing
+cmd->deprecated = "use 'new' instead"; // deprecation warning
+cmd->silence_usage = true;             // suppress usage on error
+cmd->disable_flag_parsing = true;      // pass all args raw
 ```
 
 ## Contributing
