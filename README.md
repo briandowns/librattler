@@ -51,7 +51,7 @@ main(int argc, char **argv)
     rattler_cmd *root = rattler_new_command(
         "greet [command]",
         "A friendly greeter",
-        "greet is a tiny demo of rattler_c.");
+        "greet is a tiny demo of rattler");
     rattler_set_version(root, "1.0.0");
 
     rattler_cmd *hello = rattler_new_command("hello", "Say hello", "");
@@ -144,7 +144,7 @@ All flag syntaxes are supported:
 ### Commands & Sub-commands
 
 Commands are assembled into a tree with `rattler_add_command()`.
-Dispatch is automatic — rattler_c finds the right command by walking the tree.
+Dispatch is automatic — rattler finds the right command by walking the tree.
 
 ```c
 rattler_cmd *root = rattler_new_command("example [command]", "My example", "");
@@ -176,7 +176,7 @@ function and support the same flags.
 
 ```c
 rattler_cmd *rem = rattler_new_command("remove [flags] [items...]",
-                                  "Remove items", "");
+    "Remove items", "");
 rem->run = remove_run;
 rattler_add_alias(rem, "rm");    // ./example rm  ...
 rattler_add_alias(rem, "del");   // ./example del ...
@@ -239,7 +239,7 @@ $ ./example serve --verbose
 
 ### Individually Required Flags
 
-Mark a single flag as mandatory. rattler_c errors before calling `run` if
+Mark a single flag as mandatory. rattler errors before calling `run` if
 it is not provided.
 
 ```c
@@ -473,7 +473,7 @@ void rattler_add_command(rattler_cmd *parent, rattler_cmd *child);
 int rattler_execute(rattler_cmd *root, int argc, char **argv);
 
 // free the entire command tree (single call)
-void rattler_free_tree(rattler_cmd *root);
+void rattler_free(rattler_cmd *root);
 
 // set version string (enables --version / -V)
 void rattler_set_version(rattler_cmd *cmd, const char *version);
