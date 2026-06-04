@@ -220,7 +220,7 @@ rattler_new_command(const char *use, const char *sd, const char *ld)
 {
     rattler_cmd *cmd = calloc(1, sizeof *cmd);
     if (cmd == NULL) {
-        return NULL;
+        exit(1);
     }
 
     char *u = _strdup(use);
@@ -321,11 +321,12 @@ rattler_set_args(rattler_cmd *cmd, int mn, int mx)
 void
 rattler_add_alias(rattler_cmd *cmd, const char *alias)
 {
-    cmd->aliases = realloc(cmd->aliases,
-            (size_t)(cmd->num_aliases + 1) * sizeof(char*));
-    if (cmd->aliases == NULL) {
+    char **new_aliases = realloc(cmd->aliases,
+        (size_t)(cmd->num_aliases + 1) * sizeof(char *));
+    if (new_aliases == NULL) {
         return;
     }
+    cmd->aliases = new_aliases;
 
     char *a = _strdup(alias);
     if (a == NULL) {
@@ -339,6 +340,9 @@ rattler_flags_bool(rattler_cmd *cmd, const char *name, char sh, bool def,
                    const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_BOOL, false);
+    if (f == NULL) {
+        return;
+    }
     f->value.b = def;
     f->def_val.b = def;
 
@@ -350,8 +354,13 @@ rattler_flags_string(rattler_cmd *cmd, const char *name, char sh,
                      const char *def, const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_STRING, false);
+    if (f == NULL) {
+        return;
+    }
+
     char *d1 = _strdup(def);
     if (d1 == NULL) {
+        free(f);
         return;
     }
     f->value_str = d1;
@@ -359,6 +368,7 @@ rattler_flags_string(rattler_cmd *cmd, const char *name, char sh,
     char *d2 = _strdup(def);
     if (d2 == NULL) {
         free(f->value_str);
+        free(f);
         return;
     }
     f->defval_str = d2;
@@ -371,6 +381,10 @@ rattler_flags_int(rattler_cmd *cmd, const char *name, char sh, int def,
                   const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_INT, false);
+    if (f == NULL) {
+        return;
+    }
+
     f->value.i = def;
     f->def_val.i = def;
 
@@ -382,6 +396,10 @@ rattler_flags_float(rattler_cmd *cmd, const char *name, char sh, double def,
                     const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_FLOAT, false);
+    if (f == NULL) {
+        return;
+    }
+
     f->value.f = def;
     f->def_val.f = def;
     
@@ -393,6 +411,10 @@ rattler_persistent_bool(rattler_cmd *cmd, const char *name, char sh, bool def,
                         const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_BOOL, true);
+    if (f == NULL) {
+        return;
+    }
+
     f->value.b = def;
     f->def_val.b = def;
 
@@ -404,9 +426,13 @@ rattler_persistent_string(rattler_cmd *cmd, const char *name, char sh,
                           const char *def, const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_STRING, true);
+    if (f == NULL) {
+        return;
+    }
 
     char *d1 = _strdup(def);
     if (d1 == NULL) {
+        free(f);
         return;
     }
     f->value_str = d1;
@@ -414,6 +440,7 @@ rattler_persistent_string(rattler_cmd *cmd, const char *name, char sh,
     char *d2 = _strdup(def);
     if (d2 == NULL) {
         free(f->value_str);
+        free(f);
         return;
     }
     f->defval_str = d2;
@@ -426,6 +453,10 @@ rattler_persistent_int(rattler_cmd *cmd, const char *name, char sh, int def,
                        const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_INT, true);
+    if (f == NULL) {
+        return;
+    }
+
     f->value.i = def;
     f->def_val.i = def;
 
@@ -437,6 +468,9 @@ rattler_persistent_float(rattler_cmd *cmd, const char *name, char sh,
                          double def, const char *usage)
 {
     rattler_flag *f = new_flag(name, sh, usage, FLAG_FLOAT, true);
+    if (f == NULL) {
+        return;
+    }
 
     f->value.f = def;
     f->def_val.f = def;
@@ -714,7 +748,7 @@ levenshtein(const char *a, const char *b)
 
     int *row = calloc((size_t)(lb+1), sizeof(int));
     if (row == NULL) {
-        return 0;
+        return la + lb + 1;;
     }
 
     for (int j = 0; j <= lb; j++) {
@@ -866,7 +900,9 @@ parse_flags(rattler_cmd *cmd, int argc, char **argv,
             }
 
             if (f->type == FLAG_BOOL) {
-                set_flag_value(f, val ? val : "true");
+                if (set_flag_value(f, val ? val : "true") < 0) {
+                    return -1;
+                }
             } else {
                 if (!val) {
                     if (i+1 >= argc) {
