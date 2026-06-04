@@ -126,57 +126,108 @@ struct rattler_cmd {
     bool version_flag_added;
 };
 
-rattler_cmd *rattler_new_command(const char *use, const char *short_desc,
-                                 const char *long_desc);
-void rattler_free(rattler_cmd *root);
-void rattler_add_command(rattler_cmd *parent, rattler_cmd *child);
-int rattler_execute(rattler_cmd *root, int argc, char **argv);
-int rattler_execute_c(rattler_cmd *root, int argc, char **argv);
+rattler_cmd*
+rattler_new_command(const char *use, const char *short_desc,
+                    const char *long_desc);
 
-void rattler_add_alias(rattler_cmd *cmd, const char *alias);
+void
+rattler_free(rattler_cmd *root);
 
-void rattler_flags_bool(rattler_cmd *cmd, const char *name, char sh, bool def,
-                        const char *usage);
-void rattler_flags_string(rattler_cmd *cmd, const char *name, char sh,
+void
+rattler_add_command(rattler_cmd *parent, rattler_cmd *child);
+
+int
+rattler_execute(rattler_cmd *root, int argc, char **argv);
+
+int
+rattler_execute_c(rattler_cmd *root, int argc, char **argv);
+
+void
+rattler_add_alias(rattler_cmd *cmd, const char *alias);
+
+void
+rattler_flags_bool(rattler_cmd *cmd, const char *name, char sh, bool def,
+                   const char *usage);
+
+void
+rattler_flags_string(rattler_cmd *cmd, const char *name, char sh,
+                     const char *def, const char *usage);
+
+void
+rattler_flags_int(rattler_cmd *cmd, const char *name, char sh, int def,
+                  const char *usage);
+
+void
+rattler_flags_float(rattler_cmd *cmd, const char *name, char sh,
+                    double def, const char *usage);
+
+
+void
+rattler_persistent_bool(rattler_cmd *cmd, const char *name, char sh,
+                        bool def, const char *usage);
+
+void
+rattler_persistent_string(rattler_cmd *cmd, const char *name, char sh,
                           const char *def, const char *usage);
-void rattler_flags_int(rattler_cmd *cmd, const char *name, char sh, int def,
-                       const char *usage);
-void rattler_flags_float(rattler_cmd *cmd, const char *name, char sh,
+
+void
+rattler_persistent_int(rattler_cmd *cmd, const char *name, char sh,
+                       int def, const char *usage);
+
+void
+rattler_persistent_float(rattler_cmd *cmd, const char *name, char sh,
                          double def, const char *usage);
 
-void rattler_persistent_bool(rattler_cmd *cmd, const char *name, char sh,
-                             bool def, const char *usage);
-void rattler_persistent_string(rattler_cmd *cmd, const char *name, char sh,
-                               const char *def, const char *usage);
-void rattler_persistent_int(rattler_cmd *cmd, const char *name, char sh,
-                            int def, const char *usage);
-void rattler_persistent_float(rattler_cmd *cmd, const char *name, char sh,
-                              double def, const char *usage);
+void
+rattler_mark_required(rattler_cmd *cmd, const char *flag_name);
 
-void rattler_mark_required(rattler_cmd *cmd, const char *flag_name);
+void
+rattler_mark_flags_mutually_exclusive(rattler_cmd *cmd, ...);
 
-void rattler_mark_flags_mutually_exclusive(rattler_cmd *cmd, ...);
-void rattler_mark_flags_required_together(rattler_cmd *cmd, ...);
-void rattler_mark_flags_one_required(rattler_cmd *cmd, ...);
+void
+rattler_mark_flags_required_together(rattler_cmd *cmd, ...);
+
+void
+rattler_mark_flags_one_required(rattler_cmd *cmd, ...);
 
 // flag lookup
-rattler_flag *rattler_lookup_flag(rattler_cmd *cmd, const char *name);
-rattler_flag *rattler_lookup_flag_short(rattler_cmd *cmd, char shorthand);
-bool rattler_flag_changed(rattler_cmd *cmd, const char *name);
+rattler_flag*
+rattler_lookup_flag(rattler_cmd *cmd, const char *name);
+
+rattler_flag*
+rattler_lookup_flag_short(rattler_cmd *cmd, char shorthand);
+
+bool
+rattler_flag_changed(rattler_cmd *cmd, const char *name);
 
 // typed value accessors
-const char *rattler_flag_string(rattler_cmd *cmd, const char *name);
-int rattler_flag_int(rattler_cmd *cmd, const char *name);
-double rattler_flag_float(rattler_cmd *cmd, const char *name);
-bool rattler_flag_bool(rattler_cmd *cmd, const char *name);
+const char*
+rattler_flag_string(rattler_cmd *cmd, const char *name);
+
+int
+rattler_flag_int(rattler_cmd *cmd, const char *name);
+
+double
+rattler_flag_float(rattler_cmd *cmd, const char *name);
+
+bool
+rattler_flag_bool(rattler_cmd *cmd, const char *name);
 
 // help / version
-void rattler_print_usage(rattler_cmd *cmd);
-void rattler_print_help(rattler_cmd *cmd);
-void rattler_set_version(rattler_cmd *cmd, const char *version);
-void rattler_set_args(rattler_cmd *cmd, int min, int max);
+void
+rattler_print_usage(rattler_cmd *cmd);
+
+void
+rattler_print_help(rattler_cmd *cmd);
+
+void
+rattler_set_version(rattler_cmd *cmd, const char *version);
+
+void
+rattler_set_args(rattler_cmd *cmd, int min, int max);
 
 #ifdef __cplusplus
 }
 #endif
 #endif /** end __RATTLER_H */
+
