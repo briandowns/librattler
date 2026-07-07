@@ -1,6 +1,7 @@
 #include <time.h>
 #include <stdlib.h>
-#include "crosscheck.h"
+
+#include <crosscheck.h>
 
 #include "../rattler.h"
 

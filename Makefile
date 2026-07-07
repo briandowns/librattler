@@ -23,7 +23,7 @@ endif
 
 .PHONY: tests
 tests: clean
-	$(CC) -o tests/tests tests/crosscheck.c tests/rattler_test.c rattler.c $(TEST_CFLAGS) $(LDFLAGS)
+	$(CC) -o tests/tests tests/tests.c rattler.c $(TEST_CFLAGS) -lcrosscheck
 	tests/tests
 	rm -f tests/tests
 
