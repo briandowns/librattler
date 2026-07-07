@@ -39,7 +39,7 @@ Build rich, nested CLIs with flags, aliases, lifecycle hooks, and constraint val
 #include "rattler.h"
 
 static void
-hello_run(rattler_cmd *cmd, int argc, char **argv)
+hello_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     bool loud = rattler_flag_bool(cmd, "loud");
     printf(loud ? "HELLO, WORLD!\n" : "Hello, World!\n");
@@ -55,7 +55,7 @@ main(int argc, char **argv)
     rattler_set_version(root, "1.0.0");
 
     rattler_cmd *hello = rattler_new_command("hello", "Say hello", "");
-    hello->run = hello_run;
+    hello->cmd = hello_cmd;
     rattler_flags_bool(hello, "loud", 'l', false, "shout the greeting");
 
     rattler_add_command(root, hello);
@@ -152,8 +152,8 @@ rattler_cmd *server = rattler_new_command("server [command]", "Server ops", "");
 rattler_cmd *start = rattler_new_command("start", "Start the server", "");
 rattler_cmd *stop = rattler_new_command("stop",  "Stop the server",  "");
 
-start->run = start_run;
-stop->run  = stop_run;
+start->cmd = start_cmd;
+stop->cmd  = stop_cmd;
 
 rattler_add_command(server, start);   // example server start
 rattler_add_command(server, stop);    // example server stop
@@ -171,13 +171,13 @@ $ ./example server --help
 
 ### Aliases
 
-Give a command multiple names. All aliases dispatch to the same `run`
+Give a command multiple names. All aliases dispatch to the same `cmd`
 function and support the same flags.
 
 ```c
 rattler_cmd *rem = rattler_new_command("remove [flags] [items...]",
     "Remove items", "");
-rem->run = remove_run;
+rem->cmd = remove_cmd;
 rattler_add_alias(rem, "rm");    // ./example rm  ...
 rattler_add_alias(rem, "del");   // ./example del ...
 rattler_flags_bool(rem, "force", 'f', false, "skip confirmation");
@@ -225,8 +225,8 @@ inherited** by every sub-command in the tree.
 // Defined once on root:
 rattler_persistent_bool(root, "verbose", 'v', false, "enable verbose output");
 
-// Available in every sub-command's run callback:
-static void serve_run(rattler_cmd *cmd, int argc, char **argv) {
+// Available in every sub-command's cmd callback:
+static void serve_cmd(rattler_cmd *cmd, int argc, char **argv) {
     if (rattler_flag_bool(cmd, "verbose"))   // inherited from root
         printf("[verbose] server starting\n");
 }
@@ -239,7 +239,7 @@ $ ./example serve --verbose
 
 ### Individually Required Flags
 
-Mark a single flag as mandatory. rattler errors before calling `run` if
+Mark a single flag as mandatory. rattler errors before calling `cmd` if
 it is not provided.
 
 ```c
@@ -326,17 +326,17 @@ root_persistent_pre(rattler_cmd *cmd, int argc, char **argv)
 {
     // runs before EVERY command in the tree
     if (rattler_flag_bool(cmd, "verbose"))
-        printf("[hook] persistent_pre_run\n");
+        printf("[hook] persistent_pre_cmd\n");
 }
 
 static void
 serve_pre(rattler_cmd *cmd, int argc, char **argv)
 {
-    printf("[hook] pre_run: validating config...\n");
+    printf("[hook] pre_cmd: validating config...\n");
 }
 
 static void
-serve_run(rattler_cmd *cmd, int argc, char **argv)
+serve_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     printf("Server running on port %d\n", rattler_flag_int(cmd, "port"));
 }
@@ -344,22 +344,22 @@ serve_run(rattler_cmd *cmd, int argc, char **argv)
 static void
 serve_post(rattler_cmd *cmd, int argc, char **argv)
 {
-    printf("[hook] post_run: cleanup complete\n");
+    printf("[hook] post_cmd: cleanup complete\n");
 }
 
 // wire them up:
-root->persistent_pre_run = root_persistent_pre;
-serve->pre_run           = serve_pre;
-serve->run               = serve_run;
-serve->post_run          = serve_post;
+root->persistent_pre_cmd = root_persistent_pre;
+serve->pre_cmd           = serve_pre;
+serve->cmd               = serve_cmd;
+serve->post_cmd          = serve_post;
 ```
 
 ```sh
 $ ./example serve --verbose --port 9090
-[hook] persistent_pre_run
-[hook] pre_run: validating config...
+[hook] persistent_pre_cmd
+[hook] pre_cmd: validating config...
 Server running on port 9090
-[hook] post_run: cleanup complete
+[hook] post_cmd: cleanup complete
 ```
 
 ### Argument Validation
@@ -440,12 +440,12 @@ Did you mean this?
 
 ### Typed Value Accessors
 
-Read flag values inside your `run` callbacks using the typed accessors.
+Read flag values inside your `cmd` callbacks using the typed accessors.
 These are safe to call at any point while the command tree is alive.
 
 ```c
 static void
-my_run(rattler_cmd *cmd, int argc, char **argv)
+my_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     const char *output = rattler_flag_string(cmd, "output");
     int count = rattler_flag_int(cmd, "count");
@@ -552,11 +552,11 @@ bool rattler_flag_bool(rattler_cmd *cmd, const char *name);
 ### rattler_cmd Fields (set directly)
 
 ```c
-cmd->run = my_run_fn;                  // main run function
-cmd->pre_run = my_pre_fn;              // runs before run
-cmd->post_run = my_post_fn;            // runs after run
-cmd->persistent_pre_run = my_ppr_fn;   // inherited pre-run
-cmd->persistent_post_run = my_ppor_fn; // inherited post-run
+cmd->cmd = my_cmd_fn;                  // main cmd function
+cmd->pre_cmd = my_pre_fn;              // cmds before run
+cmd->post_cmd = my_post_fn;            // runs after run
+cmd->persistent_pre_cmd = my_ppr_fn;   // inherited pre-run
+cmd->persistent_post_cmd = my_ppor_fn; // inherited post-run
 cmd->example = "  example foo\n"       // shown in --help
                "  example bar\n";
 cmd->hidden = true;                    // hide from help listing

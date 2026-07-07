@@ -1017,7 +1017,7 @@ validate_flag_groups(rattler_cmd *cmd)
 }
 
 static int
-run_command(rattler_cmd *cmd, int argc, char **argv)
+cmd_command(rattler_cmd *cmd, int argc, char **argv)
 {
     if (cmd->deprecated) {
         fprintf(stderr,"Command \"%s\" is deprecated: %s\n",
@@ -1068,7 +1068,7 @@ run_command(rattler_cmd *cmd, int argc, char **argv)
                 }
                 if (match) {
                     // pass everything AFTER the sub-command token
-                    return run_command(ch, argc-i-1, argv+i+1);
+                    return cmd_command(ch, argc-i-1, argv+i+1);
                 }
             }
 
@@ -1160,7 +1160,7 @@ run_command(rattler_cmd *cmd, int argc, char **argv)
         return 1;
     }
 
-    if (!cmd->run) {
+    if (!cmd->cmd) {
         rattler_print_help(cmd);
         return 0;
     }
@@ -1171,35 +1171,35 @@ run_command(rattler_cmd *cmd, int argc, char **argv)
         int d = 0;
 
         for (rattler_cmd *c = cmd; c && d < 64; c = c->parent) {
-            if (c->persistent_pre_run) {
+            if (c->persistent_pre_cmd) {
                 ch[d++]=c;
             }
         }
         for (int i = d-1; i >= 0; i--) {
-            ch[i]->persistent_pre_run(cmd, pc, pos);
+            ch[i]->persistent_pre_cmd(cmd, pc, pos);
         }
     }
 
-    if (cmd->pre_run) {
-        cmd->pre_run(cmd, pc, pos);
+    if (cmd->pre_cmd) {
+        cmd->pre_cmd(cmd, pc, pos);
     }
-    if (cmd->run) {
-        cmd->run(cmd, pc, pos);
+    if (cmd->cmd) {
+        cmd->cmd(cmd, pc, pos);
     }
-    if (cmd->post_run) {
-        cmd->post_run(cmd, pc, pos);
+    if (cmd->post_cmd) {
+        cmd->post_cmd(cmd, pc, pos);
     }
 
     {
         rattler_cmd *ch[64]; int d = 0;
 
         for (rattler_cmd *c = cmd; c && d < 64; c = c->parent) {
-            if (c->persistent_post_run) {
+            if (c->persistent_post_cmd) {
                 ch[d++] = c;
             }
         }
         for (int i = 0; i < d; i++) {
-            ch[i]->persistent_post_run(cmd, pc, pos);
+            ch[i]->persistent_post_cmd(cmd, pc, pos);
         }
     }
 
@@ -1209,12 +1209,12 @@ run_command(rattler_cmd *cmd, int argc, char **argv)
 int
 rattler_execute(rattler_cmd *root, int argc, char **argv)
 {
-    return run_command(root, argc-1, argv+1);
+    return cmd_command(root, argc-1, argv+1);
 }
 
 int
 rattler_execute_c(rattler_cmd *root, int argc, char **argv)
 {
-    return run_command(root, argc, argv);
+    return cmd_command(root, argc, argv);
 }
 

@@ -31,7 +31,7 @@
 #include "rattler.h"
 
 static void
-remove_run(rattler_cmd *cmd, int argc, char **argv)
+remove_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     bool force = rattler_flag_bool(cmd, "force");
 
@@ -43,7 +43,7 @@ remove_run(rattler_cmd *cmd, int argc, char **argv)
 }
 
 static void
-export_run(rattler_cmd *cmd, int argc, char **argv)
+export_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     RATTLER_UNUSED(argc);
     RATTLER_UNUSED(argv);
@@ -56,7 +56,7 @@ export_run(rattler_cmd *cmd, int argc, char **argv)
 
 // login: --user and --pass required together
 static void
-login_run(rattler_cmd *cmd, int argc, char **argv)
+login_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     RATTLER_UNUSED(argc);
     RATTLER_UNUSED(argv);
@@ -68,7 +68,7 @@ login_run(rattler_cmd *cmd, int argc, char **argv)
 
 // process: --file or --stdin (one required)
 static void
-process_run(rattler_cmd *cmd, int argc, char **argv)
+process_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     RATTLER_UNUSED(argc);
     RATTLER_UNUSED(argv);
@@ -85,7 +85,7 @@ process_run(rattler_cmd *cmd, int argc, char **argv)
 
 // output individually required 
 static void
-convert_run(rattler_cmd *cmd, int argc, char **argv)
+convert_cmd(rattler_cmd *cmd, int argc, char **argv)
 {
     RATTLER_UNUSED(argc);
     RATTLER_UNUSED(argv);
@@ -108,7 +108,7 @@ main(int argc, char **argv)
     rattler_cmd *rem = rattler_new_command(
         "remove [flags] [items...]", "Remove items",
         "Remove one or more items.\nAlso callable as: rm, del");
-    rem->run = remove_run;
+    rem->cmd = remove_cmd;
     rattler_add_alias(rem, "rm");
     rattler_add_alias(rem, "del");
     rattler_flags_bool(rem, "force", 'f', false, "skip confirmation");
@@ -117,7 +117,7 @@ main(int argc, char **argv)
     rattler_cmd *exp = rattler_new_command(
         "export [flags]", "Export data",
         "Export data in JSON or YAML format (not both).");
-    exp->run = export_run;
+    exp->cmd = export_cmd;
     rattler_flags_bool(exp, "json", 'j', false, "export as JSON");
     rattler_flags_bool(exp, "yaml", 'y', false, "export as YAML");
     rattler_mark_flags_mutually_exclusive(exp, "json", "yaml", NULL);
@@ -126,7 +126,7 @@ main(int argc, char **argv)
     rattler_cmd *login = rattler_new_command(
         "login [flags]", "Log in to the service",
         "Authenticate. --user and --pass must be supplied together.");
-    login->run = login_run;
+    login->cmd = login_cmd;
     rattler_flags_string(login, "user", 'u', "", "username");
     rattler_flags_string(login, "pass", 'p', "", "password");
     rattler_mark_flags_required_together(login, "user", "pass", NULL);
@@ -135,7 +135,7 @@ main(int argc, char **argv)
     rattler_cmd *proc = rattler_new_command(
         "process [flags]", "Process input",
         "Process data from a file or stdin (one must be given).");
-    proc->run = process_run;
+    proc->cmd = process_cmd;
     rattler_flags_string(proc, "file",  'f', "", "input file path");
     rattler_flags_bool(proc, "stdin", 's', false, "read from stdin");
     rattler_mark_flags_one_required(proc, "file", "stdin", NULL);
@@ -144,7 +144,7 @@ main(int argc, char **argv)
     rattler_cmd *conv = rattler_new_command(
         "convert [flags]", "Convert a file",
         "Convert a file. --output is always required.");
-    conv->run = convert_run;
+    conv->cmd = convert_cmd;
     rattler_flags_string(conv, "output", 'o', "", "output file path");
     rattler_mark_required(conv, "output");
 
@@ -155,7 +155,7 @@ main(int argc, char **argv)
     rattler_add_command(root, conv);
 
     if (rattler_execute(root, argc, argv) != 0) {
-        fprintf(stderr, "error: failed to run\n");
+        fprintf(stderr, "error: failed to cmd\n");
         return 1;
     }
 

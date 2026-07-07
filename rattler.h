@@ -86,7 +86,7 @@ struct rattler_flag {
     rattler_flag *next;
 };
 
-typedef void (*rattler_run_fn)(rattler_cmd *cmd, int argc, char **argv);
+typedef void (*rattler_cmd_fn)(rattler_cmd *cmd, int argc, char **argv);
 
 struct rattler_cmd {
     char *use;
@@ -101,11 +101,11 @@ struct rattler_cmd {
     bool hidden;
     char *deprecated;
 
-    rattler_run_fn persistent_pre_run;
-    rattler_run_fn pre_run;
-    rattler_run_fn run;
-    rattler_run_fn post_run;
-    rattler_run_fn persistent_post_run;
+    rattler_cmd_fn persistent_pre_cmd;
+    rattler_cmd_fn pre_cmd;
+    rattler_cmd_fn cmd;
+    rattler_cmd_fn post_cmd;
+    rattler_cmd_fn persistent_post_cmd;
 
     rattler_cmd *parent;
     rattler_cmd **children;
