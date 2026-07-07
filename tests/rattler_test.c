@@ -107,7 +107,7 @@ test_new_command_defaults(void)
     CC_ASSERT_INT_EQUAL(cmd->max_args, -1);
     CC_ASSERT_INT_EQUAL(cmd->min_args, 0);
     CC_ASSERT_INT_EQUAL(cmd->num_children, 0);
-    CC_ASSERT_NULL(cmd->run);
+    CC_ASSERT_NULL(cmd->cmd);
     CC_ASSERT_NULL(cmd->parent);
 
     rattler_free(cmd);
@@ -157,7 +157,7 @@ test_add_multiple_children(void)
 }
 
 static void
-stub_run(rattler_cmd *c, int a, char **v)
+stub_cmd(rattler_cmd *c, int a, char **v)
 {
     RATTLER_UNUSED(c);
 
@@ -212,7 +212,7 @@ test_add_command_deep_nesting(void)
     rattler_cmd *lvl1 = rattler_new_command("server", "", "");
     rattler_cmd *lvl2 = rattler_new_command("start", "", "");
 
-    lvl2->run = stub_run;
+    lvl2->cmd = stub_cmd;
     rattler_add_command(lvl1, lvl2);
     rattler_add_command(root, lvl1);
     CC_ASSERT_INT_EQUAL(root->num_children, 1);
@@ -231,11 +231,11 @@ test_add_command_deep_nesting(void)
 // rattler_execute basic dispatch
 
 cc_result_t
-test_execute_root_run(void)
+test_execute_root_cmd(void)
 {
     rattler_cmd *root = rattler_new_command("test_app", "", "");
 
-    root->run = stub_run;
+    root->cmd = stub_cmd;
     build_argv("test_app");
 
     int rc = rattler_execute(root, test_argc, test_argv);
@@ -252,7 +252,7 @@ test_execute_subcommand_dispatch(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub  = rattler_new_command("serve", "", "");
 
-    sub->run = stub_run;
+    sub->cmd = stub_cmd;
     rattler_add_command(root, sub);
     build_argv("test_app serve");
 
@@ -270,7 +270,7 @@ test_execute_unknown_subcommand_returns_error(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub  = rattler_new_command("serve", "", "");
 
-    sub->run = stub_run;
+    sub->cmd = stub_cmd;
     root->silence_usage = true;
     rattler_add_command(root, sub);
     build_argv("test_app doesnotexist");
@@ -284,7 +284,7 @@ test_execute_unknown_subcommand_returns_error(void)
 }
 
 cc_result_t
-test_execute_no_run_fn_returns_zero(void)
+test_execute_no_cmd_fn_returns_zero(void)
 {
     rattler_cmd *root = rattler_new_command("test_app", "short", "long");
     root->silence_usage = true;
@@ -389,7 +389,7 @@ test_parse_long_bool_flag(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_bool(cmd, "verbose", 'v', false, "verbose");
     build_argv("test_app --verbose");
 
@@ -405,7 +405,7 @@ test_parse_short_bool_flag(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_bool(cmd, "verbose", 'v', false, "verbose");
     build_argv("test_app -v");
 
@@ -421,7 +421,7 @@ test_parse_long_string_flag(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_string(cmd, "output", 'o', "", "output");
     build_argv("test_app --output report.txt");
 
@@ -437,7 +437,7 @@ test_parse_equals_syntax(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_int(cmd, "port", 'p', 80, "port");
     build_argv("test_app --port=9090");
 
@@ -453,7 +453,7 @@ test_parse_short_int_flag(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_int(cmd, "port", 'p', 80, "port");
     build_argv("test_app -p 4433");
 
@@ -469,7 +469,7 @@ test_parse_float_flag(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_float(cmd, "rate", 'r', 1.0, "rate");
     build_argv("test_app --rate=2.5");
 
@@ -485,7 +485,7 @@ test_parse_unknown_flag_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     cmd->silence_usage = true;
     build_argv("test_app --doesnotexist");
 
@@ -501,7 +501,7 @@ test_parse_flag_default_unchanged(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_int(cmd, "port", 'p', 8080, "port");
     build_argv("test_app");
 
@@ -518,7 +518,7 @@ test_flag_changed_after_set(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_int(cmd, "port", 'p', 8080, "port");
     build_argv("test_app --port 9090");
 
@@ -537,7 +537,7 @@ test_persistent_flag_inherited_by_child(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub = rattler_new_command("serve", "", "");
 
-    sub->run = stub_run;
+    sub->cmd = stub_cmd;
     rattler_persistent_bool(root, "verbose", 'v', false, "verbose");
     rattler_add_command(root, sub);
     rattler_flag *f = rattler_lookup_flag(sub, "verbose");
@@ -553,7 +553,7 @@ test_persistent_flag_parsed_on_child(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub  = rattler_new_command("serve", "", "");
 
-    sub->run = stub_run;
+    sub->cmd = stub_cmd;
     rattler_persistent_bool(root, "verbose", 'v', false, "verbose");
     rattler_add_command(root, sub);
     build_argv("test_app serve --verbose");
@@ -571,7 +571,7 @@ test_persistent_string_flag_value(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub = rattler_new_command("run", "", "");
 
-    sub->run = stub_run;
+    sub->cmd = stub_cmd;
     rattler_persistent_string(root, "config", 'c', "default.cfg", "config file");
     rattler_add_command(root, sub);
     build_argv("test_app run --config custom.cfg");
@@ -590,7 +590,7 @@ test_required_flag_missing_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     cmd->silence_usage = true;
     rattler_flags_string(cmd, "output", 'o', "", "output");
     rattler_mark_required(cmd, "output");
@@ -609,7 +609,7 @@ test_required_flag_present_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_string(cmd, "output", 'o', "", "output");
     rattler_mark_required(cmd, "output");
     build_argv("test_app --output out.txt");
@@ -629,7 +629,7 @@ test_mutually_exclusive_both_set_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     cmd->silence_usage = true;
     rattler_flags_bool(cmd, "json", 'j', false, "json");
     rattler_flags_bool(cmd, "yaml", 'y', false, "yaml");
@@ -649,7 +649,7 @@ test_mutually_exclusive_one_set_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_bool(cmd, "json", 'j', false, "json");
     rattler_flags_bool(cmd, "yaml", 'y', false, "yaml");
     rattler_mark_flags_mutually_exclusive(cmd, "json", "yaml", NULL);
@@ -668,7 +668,7 @@ test_mutually_exclusive_none_set_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_bool(cmd, "json", 'j', false, "json");
     rattler_flags_bool(cmd, "yaml", 'y', false, "yaml");
     rattler_mark_flags_mutually_exclusive(cmd, "json", "yaml", NULL);
@@ -689,7 +689,7 @@ test_required_together_both_set_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_string(cmd, "user", 'u', "", "user");
     rattler_flags_string(cmd, "pass", 'p', "", "pass");
     rattler_mark_flags_required_together(cmd, "user", "pass", NULL);
@@ -708,7 +708,7 @@ test_required_together_only_one_set_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     cmd->silence_usage = true;
     rattler_flags_string(cmd, "user", 'u', "", "user");
     rattler_flags_string(cmd, "pass", 'p', "", "pass");
@@ -728,7 +728,7 @@ test_required_together_neither_set_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_string(cmd, "user", 'u', "", "user");
     rattler_flags_string(cmd, "pass", 'p', "", "pass");
     rattler_mark_flags_required_together(cmd, "user", "pass", NULL);
@@ -749,7 +749,7 @@ test_one_required_first_set_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_string(cmd, "file",  'f', "", "file");
     rattler_flags_bool  (cmd, "stdin", 's', false, "stdin");
     rattler_mark_flags_one_required(cmd, "file", "stdin", NULL);
@@ -768,7 +768,7 @@ test_one_required_second_set_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_flags_string(cmd, "file",  'f', "", "file");
     rattler_flags_bool  (cmd, "stdin", 's', false, "stdin");
     rattler_mark_flags_one_required(cmd, "file", "stdin", NULL);
@@ -787,7 +787,7 @@ test_one_required_none_set_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     cmd->silence_usage = true;
     rattler_flags_string(cmd, "file",  'f', "", "file");
     rattler_flags_bool  (cmd, "stdin", 's', false, "stdin");
@@ -810,7 +810,7 @@ test_alias_dispatches_correctly(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *rem = rattler_new_command("remove", "", "");
 
-    rem->run = stub_run;
+    rem->cmd = stub_cmd;
     rattler_add_alias(rem, "rm");
     rattler_add_command(root, rem);
     build_argv("test_app rm");
@@ -829,7 +829,7 @@ test_alias_with_flags(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *rem  = rattler_new_command("remove", "", "");
 
-    rem->run = stub_run;
+    rem->cmd = stub_cmd;
     rattler_add_alias(rem, "rm");
     rattler_flags_bool(rem, "force", 'f', false, "force");
     rattler_add_command(root, rem);
@@ -849,7 +849,7 @@ test_multiple_aliases(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *rem  = rattler_new_command("remove", "", "");
 
-    rem->run = stub_run;
+    rem->cmd = stub_cmd;
     rattler_add_alias(rem, "rm");
     rattler_add_alias(rem, "del");
     rattler_add_command(root, rem);
@@ -881,12 +881,12 @@ test_alias_count_correct(void)
 // lifecycle hooks
 
 cc_result_t
-test_pre_run_called_before_run(void)
+test_pre_cmd_called_before_cmd(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->pre_run = stub_pre;
-    cmd->run = stub_run;
+    cmd->pre_cmd = stub_pre;
+    cmd->cmd = stub_cmd;
     build_argv("test_app");
 
     rattler_execute(cmd, test_argc, test_argv);
@@ -898,12 +898,12 @@ test_pre_run_called_before_run(void)
 }
 
 cc_result_t
-test_post_run_called_after_run(void)
+test_post_cmd_called_after_cmd(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
-    cmd->post_run = stub_post;
+    cmd->cmd = stub_cmd;
+    cmd->post_cmd = stub_post;
     build_argv("test_app");
 
     rattler_execute(cmd, test_argc, test_argv);
@@ -915,13 +915,13 @@ test_post_run_called_after_run(void)
 }
 
 cc_result_t
-test_persistent_pre_run_fires_on_child(void)
+test_persistent_pre_cmd_fires_on_child(void)
 {
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub = rattler_new_command("serve", "", "");
 
-    sub->run = stub_run;
-    root->persistent_pre_run = stub_ppr;
+    sub->cmd = stub_cmd;
+    root->persistent_pre_cmd = stub_ppr;
     rattler_add_command(root, sub);
     build_argv("test_app serve");
 
@@ -934,13 +934,13 @@ test_persistent_pre_run_fires_on_child(void)
 }
 
 cc_result_t
-test_persistent_post_run_fires_on_child(void)
+test_persistent_post_cmd_fires_on_child(void)
 {
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub = rattler_new_command("serve", "", "");
 
-    sub->run = stub_run;
-    root->persistent_post_run = stub_ppor;
+    sub->cmd = stub_cmd;
+    root->persistent_post_cmd = stub_ppor;
     rattler_add_command(root, sub);
     build_argv("test_app serve");
 
@@ -958,11 +958,11 @@ test_all_hooks_fire_in_order(void)
     rattler_cmd *root = rattler_new_command("test_app", "", "");
     rattler_cmd *sub = rattler_new_command("sub", "", "");
 
-    sub->run = stub_run;
-    sub->pre_run = stub_pre;
-    sub->post_run = stub_post;
-    root->persistent_pre_run = stub_ppr;
-    root->persistent_post_run = stub_ppor;
+    sub->cmd = stub_cmd;
+    sub->pre_cmd = stub_pre;
+    sub->post_cmd = stub_post;
+    root->persistent_pre_cmd = stub_ppr;
+    root->persistent_post_cmd = stub_ppor;
     rattler_add_command(root, sub);
     build_argv("test_app sub");
 
@@ -984,7 +984,7 @@ test_min_args_not_met_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_set_args(cmd, 2, -1);
     build_argv("test_app only-one");
 
@@ -1001,7 +1001,7 @@ test_max_args_exceeded_returns_error(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_set_args(cmd, 0, 1);
     build_argv("test_app one two");
 
@@ -1018,7 +1018,7 @@ test_exact_args_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_set_args(cmd, 2, 2);
     build_argv("test_app foo bar");
 
@@ -1036,7 +1036,7 @@ test_unlimited_args_succeeds(void)
 {
     rattler_cmd *cmd = rattler_new_command("test_app", "", "");
 
-    cmd->run = stub_run;
+    cmd->cmd = stub_cmd;
     rattler_set_args(cmd, 0, -1);
     build_argv("test_app a b c d e");
 
@@ -1093,10 +1093,10 @@ main(void)
     CC_RUN(test_add_command_sets_parent);
     CC_RUN(test_add_multiple_children);
     CC_RUN(test_add_command_deep_nesting);
-    CC_RUN(test_execute_root_run);
+    CC_RUN(test_execute_root_cmd);
     CC_RUN(test_execute_subcommand_dispatch);
     CC_RUN(test_execute_unknown_subcommand_returns_error);
-    CC_RUN(test_execute_no_run_fn_returns_zero);
+    CC_RUN(test_execute_no_cmd_fn_returns_zero);
     CC_RUN(test_flag_bool_registered);
     CC_RUN(test_flag_string_registered);
     CC_RUN(test_flag_int_registered);
@@ -1131,10 +1131,10 @@ main(void)
     CC_RUN(test_alias_with_flags);
     CC_RUN(test_multiple_aliases);
     CC_RUN(test_alias_count_correct);
-    CC_RUN(test_pre_run_called_before_run);
-    CC_RUN(test_post_run_called_after_run);
-    CC_RUN(test_persistent_pre_run_fires_on_child);
-    CC_RUN(test_persistent_post_run_fires_on_child);
+    CC_RUN(test_pre_cmd_called_before_cmd);
+    CC_RUN(test_post_cmd_called_after_cmd);
+    CC_RUN(test_persistent_pre_cmd_fires_on_child);
+    CC_RUN(test_persistent_post_cmd_fires_on_child);
     CC_RUN(test_all_hooks_fire_in_order);
     CC_RUN(test_min_args_not_met_returns_error);
     CC_RUN(test_max_args_exceeded_returns_error);
