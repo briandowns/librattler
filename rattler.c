@@ -189,7 +189,7 @@ make_flag_group(flag_group_kind kind, va_list ap)
 
             char **names = realloc(group->names, (size_t)cap * sizeof(char*));
             if (names == NULL) {
-                free_flag_groups(group);
+                free(group);
                 return NULL;
             }
             group->names = names;
