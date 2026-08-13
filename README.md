@@ -8,27 +8,25 @@ Build rich, nested CLIs with flags, aliases, lifecycle hooks, and constraint val
 
 ## Features
 
-| Feature 
-|---|
-| Nested sub-commands (unlimited depth) |
-| Command aliases |
-| Local and persistent flags (inherited by children) |
-| Flag Types: `bool`, `string`, `int`, `float` |
-| Syntax: `--flag=value` and `-f value` / `-fvalue` |
-| Stacked short booleans `-vvv` |
-| End-of-flags sentinel `--` |
-| Individually required flags |
-| Mutually exclusive flag groups |
-| Required-together flag groups |
-| One-required flag groups |
-| Auto `--help` / `-h` per command |
-| Auto `--version` / `-V` on root command |
-| Typo suggestions |
-| Lifecycle hooks |
-| Hidden commands |
-| Deprecated commands |
-| Zero external dependencies |
-| C23, compiles cleanly with `-Wall -Wextra` |
+* Nested sub-commands (unlimited depth)
+* Command aliases
+* Local and persistent flags (inherited by children)
+* Flag Types: `bool`, `string`, `int`, `float`
+* Syntax: `--flag=value` and `-f value` / `-fvalue`
+* Stacked short booleans `-vvv`
+* End-of-flags sentinel `--`
+* Individually required flags
+* Mutually exclusive flag groups
+* Required-together flag groups
+* One-required flag groups
+* Auto `--help` / `-h` per command
+* Auto `--version` / `-V` on root command
+* Typo suggestions
+* Lifecycle hooks
+* Hidden commands
+* Deprecated commands 
+* Zero external dependencies
+* C23
 
 ## Quick Start
 
@@ -113,7 +111,7 @@ $ ./example process --stdin
 Processing from stdin
 
 $ ./example process
-rattler: at least one of the flags in the group [--file --stdin] is required
+error: at least one of the flags in the group [--file --stdin] is required
 ```
 
 ### Flags
@@ -210,7 +208,7 @@ Typo suggestions also cover aliases:
 
 ```sh
 $ ./example dek
-rattler: unknown command "dek"
+error: unknown command "dek"
 
 Did you mean this?
     del
@@ -249,7 +247,7 @@ rattler_mark_required(conv, "output");
 
 ```sh
 $ ./example convert
-rattler: required flag --output not set
+error: required flag --output not set
 
 Usage:
   convert [flags]
@@ -380,7 +378,7 @@ rattler_set_args(cmd, min, max);   // max = -1 means unlimited
 
 ```sh
 $ ./example config set only-one-arg
-rattler: need at least 2 arg(s), got 1
+error: need at least 2 arg(s), got 1
 ```
 
 ### Help & Version
@@ -432,7 +430,7 @@ example version 2.0.0
 
 ```sh
 $ ./example convert
-rattler: unknown command "convert"
+error: unknown command "convert"
 
 Did you mean this?
     convert

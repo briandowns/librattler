@@ -33,11 +33,8 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#define RATTLER_UNUSED(x) (void)x;
+#define RATTLER_UNUSED(x) (void)x
 
 typedef struct rattler_flag rattler_flag;
 typedef struct rattler_cmd rattler_cmd;
@@ -68,9 +65,6 @@ struct rattler_flag {
     char shorthand;
     char *usage;
     flag_type type;
-    bool persistent;
-    bool required;
-    bool changed;
     char *value_str;
     char *defval_str;
     union {
@@ -84,6 +78,9 @@ struct rattler_flag {
         double f;
     } def_val;
     rattler_flag *next;
+    bool persistent;
+    bool required;
+    bool changed;
 };
 
 typedef void (*rattler_cmd_fn)(rattler_cmd *cmd, int argc, char **argv);
@@ -98,7 +95,6 @@ struct rattler_cmd {
     char **aliases;
     int num_aliases;
 
-    bool hidden;
     char *deprecated;
 
     rattler_cmd_fn persistent_pre_cmd;
@@ -122,6 +118,7 @@ struct rattler_cmd {
     int min_args;
     int max_args;
 
+    bool hidden;
     bool help_flag_added;
     bool version_flag_added;
 };
@@ -230,4 +227,3 @@ rattler_set_args(rattler_cmd *cmd, int min, int max);
 }
 #endif
 #endif /** end __RATTLER_H */
-
