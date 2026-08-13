@@ -26,6 +26,9 @@
  */
 
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "rattler.h"
 
@@ -69,6 +72,7 @@ build_path(const rattler_cmd *cmd, char *buf, size_t sz)
     if (cmd == NULL) {
         return;
     }
+
     if (cmd->parent) {
         build_path(cmd->parent, buf, sz);
         strncat(buf, " ", sz-strlen(buf)-1);
@@ -84,37 +88,36 @@ static rattler_flag*
 new_flag(const char *name, char sh, const char *usage,
          flag_type type, bool persistent)
 {
-    rattler_flag *f = calloc(1, sizeof *f);
-    if (f == NULL) {
-        
+    rattler_flag *flag = calloc(1, sizeof *flag);
+    if (flag == NULL) {
         return NULL;
     }
 
-    f->name = _strdup(name);
-    if (f->name == NULL) {
-        free(f);
+    flag->name = _strdup(name);
+    if (flag->name == NULL) {
+        free(flag);
         return NULL;
     }
 
-    f->shorthand = sh;
-    f->usage = _strdup(usage);
-    if (f->usage == NULL) {
-        free(f->name);
-        free(f);
+    flag->shorthand = sh;
+    flag->usage = _strdup(usage);
+    if (flag->usage == NULL) {
+        free(flag->name);
+        free(flag);
         return NULL;
     }
 
-    f->type = type;
-    f->persistent = persistent;
+    flag->type = type;
+    flag->persistent = persistent;
 
-    return f;
+    return flag;
 }
 
 static void
-append_flag(rattler_flag **list, rattler_flag *f)
+append_flag(rattler_flag **list, rattler_flag *flag)
 {
     if (*list == NULL) {
-        *list = f;
+        *list = flag;
         return;
     }
 
@@ -123,104 +126,118 @@ append_flag(rattler_flag **list, rattler_flag *f)
     while (c->next) {
         c = c->next;
     }
-    c->next = f;
+    c->next = flag;
 }
 
 static void
-free_flag_list(rattler_flag *f)
+free_flag_list(rattler_flag *flag)
 {
-    while (f != NULL) {
-        rattler_flag *nx = f->next;
+    while (flag != NULL) {
+        rattler_flag *nx = flag->next;
 
-        free(f->name);
-        free(f->usage);
+        free(flag->name);
+        free(flag->usage);
 
-        if (f->type == FLAG_STRING) {
-            free(f->value_str);
-            free(f->defval_str);
+        if (flag->type == FLAG_STRING) {
+            free(flag->value_str);
+            free(flag->defval_str);
         }
 
-        free(f);
-        f = nx;
+        free(flag);
+        flag = nx;
     }
 }
 
 static void
-free_flag_groups(rattler_flag_group *g)
+free_flag_groups(rattler_flag_group *groups)
 {
-    while (g) {
-        rattler_flag_group *nx = g->next;
+    while (groups) {
+        rattler_flag_group *nx = groups->next;
 
-        for (int i = 0; i < g->count; i++) {
-            free(g->names[i]);
+        for (int i = 0; i < groups->count; i++) {
+            free(groups->names[i]);
         }
 
-        free(g->names);
-        free(g);
+        free(groups->names);
+        free(groups);
 
-        g = nx;
+        groups = nx;
     }
 }
 
 static rattler_flag_group*
 make_flag_group(flag_group_kind kind, va_list ap)
 {
-    rattler_flag_group *g = calloc(1, sizeof *g);
-    if (g == NULL) {
-        exit(1);
+    rattler_flag_group *group = calloc(1, sizeof *group);
+    if (group == NULL) {
+        return NULL;
     }
 
-    g->kind = kind;
+    group->kind = kind;
     int cap = 8;
 
-    g->names = malloc((size_t)cap * sizeof(char *));
-    if (g->names == NULL) {
+    group->names = malloc((size_t)cap * sizeof(char*));
+    if (group->names == NULL) {
+        free(group);
         return NULL;
     }
 
     const char *name;
-    while ((name = va_arg(ap, const char *)) != NULL) {
-        if (g->count >= cap) {
+    while ((name = va_arg(ap, const char*)) != NULL) {
+        if (group->count >= cap) {
             cap *= 2;
 
-            g->names = realloc(g->names, (size_t)cap * sizeof(char *));
-            if (!g->names) {
+            char **names = realloc(group->names, (size_t)cap * sizeof(char*));
+            if (names == NULL) {
+                free_flag_groups(group);
                 return NULL;
             }
+            group->names = names;
         }
 
         char *n = _strdup(name);
         if (n == NULL) {
             return NULL;
         }
-        g->names[g->count++] = n;
+        group->names[group->count++] = n;
     }
 
-    return g;
+    return group;
 }
 
 static void
-append_flag_group(rattler_cmd *cmd, rattler_flag_group *g)
+append_flag_group(rattler_cmd *cmd, rattler_flag_group *group)
 {
     if (cmd->flag_groups == NULL) {
-        cmd->flag_groups = g;
+        cmd->flag_groups = group;
         return;
     }
 
-    rattler_flag_group *c = cmd->flag_groups;
+    rattler_flag_group *f_group = cmd->flag_groups;
 
-    while (c->next) {
-        c = c->next;
+    while (f_group->next) {
+        f_group = f_group->next;
     }
-    c->next = g;
+    f_group->next = group;
 }
 
 rattler_cmd*
-rattler_new_command(const char *use, const char *sd, const char *ld)
+rattler_new_command(const char *use, const char *short_desc,
+                    const char *long_desc)
 {
+    if (use == NULL || *use == '\0') {
+        return NULL;
+    }
+    if (short_desc == NULL) {
+        short_desc = "";
+    }
+    if (long_desc == NULL) {
+        long_desc = "";
+    }
+
     rattler_cmd *cmd = calloc(1, sizeof *cmd);
     if (cmd == NULL) {
-        exit(1);
+        return NULL;
     }
 
     char *u = _strdup(use);
@@ -230,7 +247,7 @@ rattler_new_command(const char *use, const char *sd, const char *ld)
     }
     cmd->use = u;
 
-    char *s = _strdup(sd);
+    char *s = _strdup(short_desc);
     if (s == NULL) {
         free(cmd->use);
         free(cmd);
@@ -239,7 +256,7 @@ rattler_new_command(const char *use, const char *sd, const char *ld)
     }
     cmd->short_desc = s;
 
-    char *l = _strdup(ld);
+    char *l = _strdup(long_desc);
     if (l == NULL) {
         free(cmd->use);
         free(cmd->short_desc);
@@ -289,33 +306,38 @@ rattler_add_command(rattler_cmd *parent, rattler_cmd *child)
 
     if (parent->num_children >= parent->cap_children) {
         parent->cap_children = parent->cap_children ? parent->cap_children*2:4;
-        parent->children = realloc(parent->children,
-            (size_t)parent->cap_children * sizeof(rattler_cmd*));
+        rattler_cmd **children = realloc(parent->children,
+            (size_t)parent->cap_children * sizeof(*children));
 
-        if (parent->children == NULL) {
+        if (children == NULL) {
             return;
         }
+        parent->children = children;
     }
     parent->children[parent->num_children++] = child;
 }
 
 void
-rattler_set_version(rattler_cmd *cmd, const char *v)
+rattler_set_version(rattler_cmd *cmd, const char *version)
 {
-    free(cmd->version);
+    if (version == NULL) {
+        return;
+    }
 
-    char *ver = _strdup(v);
+    char *ver = _strdup(version);
     if (ver == NULL) {
         return;
     }
+
+    free(cmd->version);
     cmd->version = ver;
 }
 
 void
-rattler_set_args(rattler_cmd *cmd, int mn, int mx)
+rattler_set_args(rattler_cmd *cmd, int min, int max)
 {
-    cmd->min_args = mn;
-    cmd->max_args = mx;
+    cmd->min_args = min;
+    cmd->max_args = max;
 }
 
 void
@@ -339,153 +361,153 @@ void
 rattler_flags_bool(rattler_cmd *cmd, const char *name, char sh, bool def,
                    const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_BOOL, false);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_BOOL, false);
+    if (flag == NULL) {
         return;
     }
-    f->value.b = def;
-    f->def_val.b = def;
+    flag->value.b = def;
+    flag->def_val.b = def;
 
-    append_flag(&cmd->flags, f);
+    append_flag(&cmd->flags, flag);
 }
 
 void
 rattler_flags_string(rattler_cmd *cmd, const char *name, char sh,
                      const char *def, const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_STRING, false);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_STRING, false);
+    if (flag == NULL) {
         return;
     }
 
     char *d1 = _strdup(def);
     if (d1 == NULL) {
-        free(f);
+        free(flag);
         return;
     }
-    f->value_str = d1;
+    flag->value_str = d1;
 
     char *d2 = _strdup(def);
     if (d2 == NULL) {
-        free(f->value_str);
-        free(f);
+        free(flag->value_str);
+        free(flag);
         return;
     }
-    f->defval_str = d2;
+    flag->defval_str = d2;
 
-    append_flag(&cmd->flags, f);
+    append_flag(&cmd->flags, flag);
 }
 
 void
 rattler_flags_int(rattler_cmd *cmd, const char *name, char sh, int def,
                   const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_INT, false);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_INT, false);
+    if (flag == NULL) {
         return;
     }
 
-    f->value.i = def;
-    f->def_val.i = def;
+    flag->value.i = def;
+    flag->def_val.i = def;
 
-    append_flag(&cmd->flags, f);
+    append_flag(&cmd->flags, flag);
 }
 
 void
 rattler_flags_float(rattler_cmd *cmd, const char *name, char sh, double def,
                     const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_FLOAT, false);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_FLOAT, false);
+    if (flag == NULL) {
         return;
     }
 
-    f->value.f = def;
-    f->def_val.f = def;
-    
-    append_flag(&cmd->flags, f);
+    flag->value.f = def;
+    flag->def_val.f = def;
+
+    append_flag(&cmd->flags, flag);
 }
 
 void
 rattler_persistent_bool(rattler_cmd *cmd, const char *name, char sh, bool def,
                         const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_BOOL, true);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_BOOL, true);
+    if (flag == NULL) {
         return;
     }
 
-    f->value.b = def;
-    f->def_val.b = def;
+    flag->value.b = def;
+    flag->def_val.b = def;
 
-    append_flag(&cmd->persistent_flags, f);
+    append_flag(&cmd->persistent_flags, flag);
 }
 
 void
 rattler_persistent_string(rattler_cmd *cmd, const char *name, char sh,
                           const char *def, const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_STRING, true);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_STRING, true);
+    if (flag == NULL) {
         return;
     }
 
     char *d1 = _strdup(def);
     if (d1 == NULL) {
-        free(f);
+        free(flag);
         return;
     }
-    f->value_str = d1;
+    flag->value_str = d1;
 
     char *d2 = _strdup(def);
     if (d2 == NULL) {
-        free(f->value_str);
-        free(f);
+        free(flag->value_str);
+        free(flag);
         return;
     }
-    f->defval_str = d2;
+    flag->defval_str = d2;
 
-    append_flag(&cmd->persistent_flags, f);
+    append_flag(&cmd->persistent_flags, flag);
 }
 
 void
 rattler_persistent_int(rattler_cmd *cmd, const char *name, char sh, int def,
                        const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_INT, true);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_INT, true);
+    if (flag == NULL) {
         return;
     }
 
-    f->value.i = def;
-    f->def_val.i = def;
+    flag->value.i = def;
+    flag->def_val.i = def;
 
-    append_flag(&cmd->persistent_flags, f);
+    append_flag(&cmd->persistent_flags, flag);
 }
 
 void
 rattler_persistent_float(rattler_cmd *cmd, const char *name, char sh,
                          double def, const char *usage)
 {
-    rattler_flag *f = new_flag(name, sh, usage, FLAG_FLOAT, true);
-    if (f == NULL) {
+    rattler_flag *flag = new_flag(name, sh, usage, FLAG_FLOAT, true);
+    if (flag == NULL) {
         return;
     }
 
-    f->value.f = def;
-    f->def_val.f = def;
+    flag->value.f = def;
+    flag->def_val.f = def;
 
-    append_flag(&cmd->persistent_flags, f);
+    append_flag(&cmd->persistent_flags, flag);
 }
 
 void
 rattler_mark_required(rattler_cmd *cmd, const char *name)
 {
-    rattler_flag *f = rattler_lookup_flag(cmd, name);
-    if (f != NULL) {
-        f->required = true;
+    rattler_flag *flag = rattler_lookup_flag(cmd, name);
+    if (flag != NULL) {
+        flag->required = true;
     } else {
-        fprintf(stderr, "rattler: rattler_mark_required: unknown flag --%s\n",
+        fprintf(stderr, "error: rattler_mark_required: unknown flag --%s\n",
             name);
     }
 }
@@ -546,22 +568,22 @@ rattler_lookup_flag(rattler_cmd *cmd, const char *name)
 rattler_flag*
 rattler_lookup_flag_short(rattler_cmd *cmd, char sh)
 {
-    for (rattler_flag *f = cmd->flags; f; f = f->next) {
-        if (f->shorthand == sh) {
-            return f;
+    for (rattler_flag *flag = cmd->flags; flag; flag = flag->next) {
+        if (flag->shorthand == sh) {
+            return flag;
         }
     }
 
-    for (rattler_flag *f = cmd->persistent_flags; f; f = f->next) {
-        if (f->shorthand == sh) {
-            return f;
+    for (rattler_flag *flag = cmd->persistent_flags; flag; flag = flag->next) {
+        if (flag->shorthand == sh) {
+            return flag;
         }
     }
 
     for (rattler_cmd *c = cmd->parent; c; c = c->parent) {
-        for (rattler_flag *f = c->persistent_flags; f; f = f->next) {
-            if (f->shorthand == sh) {
-                return f;
+        for (rattler_flag *flag = c->persistent_flags; flag; flag = flag->next) {
+            if (flag->shorthand == sh) {
+                return flag;
             }
         }
     }
@@ -572,74 +594,78 @@ rattler_lookup_flag_short(rattler_cmd *cmd, char sh)
 bool
 rattler_flag_changed(rattler_cmd *cmd, const char *name)
 {
-    rattler_flag *f = rattler_lookup_flag(cmd, name);
-    return f && f->changed;
+    rattler_flag *flag = rattler_lookup_flag(cmd, name);
+    return flag && flag->changed;
 }
 
 const char*
 rattler_flag_string(rattler_cmd *cmd, const char *name)
 {
-    rattler_flag *f = rattler_lookup_flag(cmd, name);
-    return (f && f->type == FLAG_STRING) ?
-        (f->value_str ? f->value_str : "") : "";
+    rattler_flag *flag = rattler_lookup_flag(cmd, name);
+    return (flag && flag->type == FLAG_STRING) ?
+        (flag->value_str ? flag->value_str : "") : "";
 }
 
 int
 rattler_flag_int(rattler_cmd *cmd, const char *name)
 {
-    rattler_flag *f = rattler_lookup_flag(cmd, name);
-    return (f && f->type == FLAG_INT) ? f->value.i : 0;
+    rattler_flag *flag = rattler_lookup_flag(cmd, name);
+    return (flag && flag->type == FLAG_INT) ? flag->value.i : 0;
 }
 
 double
 rattler_flag_float(rattler_cmd *cmd, const char *name)
 {
-    rattler_flag *f = rattler_lookup_flag(cmd, name);
-    return (f && f->type == FLAG_FLOAT) ? f->value.f : 0.0;
+    rattler_flag *flag = rattler_lookup_flag(cmd, name);
+    return (flag && flag->type == FLAG_FLOAT) ? flag->value.f : 0.0;
 }
 
 bool
 rattler_flag_bool(rattler_cmd *cmd, const char *name)
 {
-    rattler_flag *f = rattler_lookup_flag(cmd, name);
-    return (f && f->type == FLAG_BOOL) ? f->value.b : false;
+    rattler_flag *flag = rattler_lookup_flag(cmd, name);
+    return (flag && flag->type == FLAG_BOOL) ? flag->value.b : false;
 }
 
 static void
 print_flags_section(const char *title, rattler_flag *list)
 {
+    if (title == NULL || *title == '\0') {
+        return;
+    }
+
     if (list == NULL) {
         return;
     }
 
     printf("\n%s:\n", title);
 
-    for (rattler_flag *f = list; f; f = f->next) {
+    for (rattler_flag *flag = list; flag; flag = flag->next) {
         char sb[8];
 
-        if (f->shorthand) {
-            snprintf(sb, sizeof sb, "-%c,", f->shorthand);
+        if (flag->shorthand) {
+            snprintf(sb, sizeof sb, "-%c,", flag->shorthand);
         } else {
             snprintf(sb, sizeof sb, "   ");
         }
 
-        const char *req = f->required ? " (REQUIRED)" : "";
-        switch (f->type) {
+        const char *req = flag->required ? " (REQUIRED)" : "";
+        switch (flag->type) {
         case FLAG_BOOL:
             printf("  %s --%s%s\n\t\t%s (default %s)\n",
-                sb, f->name, req, f->usage, f->def_val.b ? "true" : "false");
+                sb, flag->name, req, flag->usage, flag->def_val.b ? "true" : "false");
                 break;
         case FLAG_STRING:
             printf("  %s --%s string%s\n\t\t%s (default \"%s\")\n",
-                sb, f->name, req, f->usage, f->defval_str ? f->defval_str : "");
+                sb, flag->name, req, flag->usage, flag->defval_str ? flag->defval_str : "");
                 break;
         case FLAG_INT:
             printf("  %s --%s int%s\n\t\t%s (default %d)\n",
-                sb, f->name, req, f->usage, f->def_val.i);
+                sb, flag->name, req, flag->usage, flag->def_val.i);
                 break;
         case FLAG_FLOAT:
             printf("  %s --%s float%s\n\t\t%s (default %g)\n",
-                sb, f->name, req, f->usage, f->def_val.f);
+                sb, flag->name, req, flag->usage, flag->def_val.f);
                 break;
         }
     }
@@ -822,39 +848,57 @@ suggest_command(rattler_cmd *parent, const char *typo)
 }
 
 static int
-set_flag_value(rattler_flag *f, const char *val)
+set_flag_value(rattler_flag *flag, const char *val)
 {
-    f->changed = true;
+    char *end;
+    long lval;
+    double dval;
 
-    switch (f->type) {
+    switch (flag->type) {
     case FLAG_BOOL:
         if (val == NULL || strcmp(val, "true") == 0 || strcmp(val, "1") == 0
                 || strcmp(val,"yes") == 0) {
-            f->value.b = true;
+            flag->value.b = true;
         } else if (strcmp(val, "false") == 0 || strcmp(val, "0") == 0
                 || strcmp(val, "no") == 0) {
-            f->value.b = false;
+            flag->value.b = false;
         } else {
-            fprintf(stderr,"rattler: invalid bool '%s'\n",val);
+            fprintf(stderr,"error: invalid bool '%s'\n", val);
             return -1;
         }
+
         break;
     case FLAG_STRING:
-        free(f->value_str);
+        free(flag->value_str);
 
         char *s = _strdup(val);
         if (s == NULL) {
             return -1;
         }
-        f->value_str = s;
+        flag->value_str = s;
+
         break;
     case FLAG_INT:
-        f->value.i = atoi(val);
+        lval = strtol(val, &end, 10);
+        if (*end != '\0') {
+            fprintf(stderr, "error: invalid int '%s'\n", val);
+            return -1;
+        }
+        flag->value.i = (int)lval;
+
         break;
     case FLAG_FLOAT:
-        f->value.f = atof(val);
+        dval = strtod(val, &end);
+        if (*end != '\0') {
+            fprintf(stderr, "error: invalid float '%s'\n", val);
+            return -1;
+        }
+        flag->value.f = dval;
+
         break;
     }
+
+    flag->changed = true;
 
     return 0;
 }
@@ -864,9 +908,8 @@ parse_flags(rattler_cmd *cmd, int argc, char **argv,
             char **pos, int pos_cap)
 {
     int pc = 0;
-    int i = 0;
 
-    while (i < argc) {
+    for (int i = 0; i < argc;) {
         char *arg = argv[i];
         if (strcmp(arg, "--") == 0) {
             i++;
@@ -875,69 +918,72 @@ parse_flags(rattler_cmd *cmd, int argc, char **argv,
             }
             break;
         }
+
         if (strncmp(arg, "--", 2) == 0) {
-            char *name = arg+2;
+            char *name = arg + 2;
             char namebuf[256];
             const char *val = NULL;
-            char *eq = strchr(name,'=');
+            char *eq = strchr(name, '=');
 
             if (eq) {
                 size_t len = (size_t)(eq-name);
                 if (len >= sizeof namebuf) {
-                    len = sizeof namebuf-1;
+                    len = sizeof namebuf - 1;
                 }
 
                 strncpy(namebuf, name, len);
                 namebuf[len] = '\0';
                 name = namebuf;
-                val = eq+1;
+                val = eq + 1;
             }
 
-            rattler_flag *f = rattler_lookup_flag(cmd,name);
-            if (f == NULL) {
-                fprintf(stderr,"rattler: unknown flag: --%s\n", name);
+            rattler_flag *flag = rattler_lookup_flag(cmd, name);
+            if (flag == NULL) {
+                fprintf(stderr,"error: unknown flag: --%s\n", name);
                 return -1;
             }
 
-            if (f->type == FLAG_BOOL) {
-                if (set_flag_value(f, val ? val : "true") < 0) {
+            if (flag->type == FLAG_BOOL) {
+                if (set_flag_value(flag, val ? val : "true") < 0) {
                     return -1;
                 }
             } else {
                 if (!val) {
                     if (i+1 >= argc) {
-                        fprintf(stderr,"rattler: --%s needs a value\n", name);
+                        fprintf(stderr,"error: --%s needs a value\n", name);
                         return -1;
                     }
                     val=argv[++i];
                 }
-                if (set_flag_value(f, val) < 0) {
+                if (set_flag_value(flag, val) < 0) {
                     return -1;
                 }
             }
-            i++; continue;
+            i++;
+            continue;
         }
         if (arg[0] == '-' && arg[1] && arg[1] != '-') {
             int j = 1;
 
             while (arg[j]) {
                 char sh = arg[j];
-                rattler_flag *f = rattler_lookup_flag_short(cmd,sh);
-                if (f == NULL) {
-                    fprintf(stderr,"rattler: unknown flag: -%c\n",sh);
+                rattler_flag *flag = rattler_lookup_flag_short(cmd, sh);
+                if (flag == NULL) {
+                    fprintf(stderr,"error: unknown flag: -%c\n", sh);
                     return -1;
                 }
 
-                if (f->type == FLAG_BOOL) {
-                    set_flag_value(f, "true");
+                if (flag->type == FLAG_BOOL) {
+                    set_flag_value(flag, "true");
                     j++;
                 } else {
-                    const char *val = arg[j+1] ? &arg[j+1] : (i+1 < argc ? argv[++i]: NULL);
+                    const char *val = arg[j + 1] ? &arg[j + 1] :
+                        (i + 1 < argc ? argv[++i]: NULL);
                     if (val == NULL) {
-                        fprintf(stderr,"rattler: -%c needs a value\n", sh);
+                        fprintf(stderr,"error: -%c needs a value\n", sh);
                         return -1;
                     }
-                    if (set_flag_value(f, val) < 0) {
+                    if (set_flag_value(flag, val) < 0) {
                         return -1;
                     }
                     break;
@@ -951,6 +997,7 @@ parse_flags(rattler_cmd *cmd, int argc, char **argv,
         }
         i++;
     }
+
     return pc;
 }
 
@@ -959,55 +1006,59 @@ validate_flag_groups(rattler_cmd *cmd)
 {
     int errors = 0;
 
-    for (rattler_flag_group *g=cmd->flag_groups; g; g=g->next) {
+    for (rattler_flag_group *group = cmd->flag_groups; group;
+        group = group->next) {
         int set_count = 0;
 
-        for (int i=0; i<g->count; i++) {
-            rattler_flag *f = rattler_lookup_flag(cmd,g->names[i]);
+        for (int i = 0; i < group->count; i++) {
+            rattler_flag *f = rattler_lookup_flag(cmd, group->names[i]);
             if (f && f->changed) {
                 set_count++;
             }
         }
 
-        switch (g->kind) {
+        switch (group->kind) {
         case FGROUP_MUTUALLY_EXCLUSIVE:
             if (set_count > 1) {
                 fprintf(stderr,"error: if any flags in the group [");
 
-                for (int i = 0; i < g->count; i++) {
-                    fprintf(stderr,"%s--%s", i ? " " : "",g->names[i]);
+                for (int i = 0; i < group->count; i++) {
+                    fprintf(stderr,"%s--%s", i ? " " : "", group->names[i]);
                 }
-                fprintf(stderr,"] are set none of the others can be; %d were set\n",set_count);
+                fprintf(stderr,"] are set none of the others can be; %d were set\n",
+                    set_count);
                 errors++;
             }
             break;
         case FGROUP_REQUIRED_TOGETHER:
-            if (set_count > 0 && set_count < g->count) {
+            if (set_count > 0 && set_count < group->count) {
                 fprintf(stderr,"error: if any flags in the group [");
 
-                for (int i = 0; i < g->count; i++) {
-                    fprintf(stderr,"%s--%s", i ? " " : "",g->names[i]);
+                for (int i = 0; i < group->count; i++) {
+                    fprintf(stderr,"%s--%s", i ? " " : "", group->names[i]);
                 }
                 fprintf(stderr,"] are set they must all be set; missing:");
 
-                for (int i = 0; i < g->count; i++) {
-                    rattler_flag *f = rattler_lookup_flag(cmd,g->names[i]);
+                for (int i = 0; i < group->count; i++) {
+                    rattler_flag *f = rattler_lookup_flag(cmd, group->names[i]);
 
                     if (f && !f->changed) {
-                        fprintf(stderr," --%s",g->names[i]);
+                        fprintf(stderr," --%s", group->names[i]);
                     }
                 }
-                fprintf(stderr,"\n"); errors++;
+                fprintf(stderr,"\n");
+                errors++;
             }
             break;
         case FGROUP_ONE_REQUIRED:
             if (set_count==0) {
                 fprintf(stderr,"error: at least one of the flags in the group [");
 
-                for (int i = 0; i < g->count; i++) {
-                    fprintf(stderr,"%s--%s", i ? " " : "",g->names[i]);
+                for (int i = 0; i < group->count; i++) {
+                    fprintf(stderr,"%s--%s", i ? " " : "", group->names[i]);
                 }
-                fprintf(stderr,"] is required\n"); errors++;
+                fprintf(stderr,"] is required\n");
+                errors++;
             }
             break;
         }
@@ -1029,7 +1080,8 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
         cmd->help_flag_added = true;
     }
     if (cmd->version && !cmd->version_flag_added) {
-        rattler_flags_bool(cmd, "version", 'V', false, "version for this command");
+        rattler_flags_bool(cmd, "version", 'V', false,
+            "version for this command");
         cmd->version_flag_added = true;
     }
 
@@ -1063,11 +1115,14 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
 
                 if (!match) {
                     for (int ai = 0; ai < ch->num_aliases; ai++) {
-                        if (strcmp(ch->aliases[ai], tok) == 0) { match=true; break; }
+                        if (strcmp(ch->aliases[ai], tok) == 0) {
+                            match = true;
+                            break;
+                        }
                     }
                 }
                 if (match) {
-                    // pass everything AFTER the sub-command token
+                    // pass everything after the sub-command token
                     return cmd_command(ch, argc-i-1, argv+i+1);
                 }
             }
@@ -1077,7 +1132,7 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
         }
     }
 
-    // parse flags for THIS command
+    // parse flags for this command
     char *pos[256];
     int pc = 0;
 
@@ -1097,7 +1152,7 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
     }
 
     // help
-    rattler_flag *hf=rattler_lookup_flag(cmd,"help");
+    rattler_flag *hf = rattler_lookup_flag(cmd, "help");
     if (hf && hf->value.b) {
         rattler_print_help(cmd);
         return 0;
@@ -1105,11 +1160,11 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
 
     // version
     if (cmd->version) {
-        rattler_flag *vf = rattler_lookup_flag(cmd,"version");
+        rattler_flag *vf = rattler_lookup_flag(cmd, "version");
 
         if (vf && vf->value.b) {
             char *n = cmd_name(cmd);
-            printf("%s version %s\n",n,cmd->version);
+            printf("%s version %s\n", n, cmd->version);
             free(n);
 
             return 0;
@@ -1118,8 +1173,8 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
 
     // unknown positional that looks like a sub-command
     if (pc > 0 && cmd->num_children > 0) {
-        fprintf(stderr,"rattler: unknown command \"%s\"\n",pos[0]);
-
+        fprintf(stderr,"error: unknown command \"%s\"\n",pos[0]);
+ 
         suggest_command(cmd,pos[0]);
         if (!cmd->silence_usage) {
             rattler_print_usage(cmd);
@@ -1131,7 +1186,7 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
     // individual required flags
     for (rattler_flag *f = cmd->flags; f; f = f->next) {
         if (f->required && !f->changed) {
-            fprintf(stderr,"rattler: required flag --%s not set\n",f->name);
+            fprintf(stderr,"error: required flag --%s not set\n",f->name);
 
             if (!cmd->silence_usage) {
                 rattler_print_usage(cmd);
@@ -1152,11 +1207,13 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
 
     // arg count
     if (cmd->min_args > 0 && pc < cmd->min_args) {
-        fprintf(stderr,"rattler: need at least %d arg(s), got %d\n",cmd->min_args,pc);
+        fprintf(stderr,"error: need at least %d arg(s), got %d\n",
+            cmd->min_args,pc);
         return 1;
     }
     if (cmd->max_args >= 0 && pc > cmd->max_args) {
-        fprintf(stderr,"rattler: need at most %d arg(s), got %d\n",cmd->max_args,pc);
+        fprintf(stderr,"error: need at most %d arg(s), got %d\n",
+            cmd->max_args,pc);
         return 1;
     }
 
@@ -1172,7 +1229,7 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
 
         for (rattler_cmd *c = cmd; c && d < 64; c = c->parent) {
             if (c->persistent_pre_cmd) {
-                ch[d++]=c;
+                ch[d++] = c;
             }
         }
         for (int i = d-1; i >= 0; i--) {
@@ -1209,7 +1266,7 @@ cmd_command(rattler_cmd *cmd, int argc, char **argv)
 int
 rattler_execute(rattler_cmd *root, int argc, char **argv)
 {
-    return cmd_command(root, argc-1, argv+1);
+    return cmd_command(root, argc - 1, argv + 1);
 }
 
 int
@@ -1217,4 +1274,3 @@ rattler_execute_c(rattler_cmd *root, int argc, char **argv)
 {
     return cmd_command(root, argc, argv);
 }
-
